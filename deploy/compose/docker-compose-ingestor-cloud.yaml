@@ -1,0 +1,89 @@
+services:
+  # Lightweight ingestor that uses cloud NIMs
+  ingestor-server:
+    container_name: ingestor-server
+    image: nvcr.io/nvidia/blueprint/ingestor-server:${TAG:-2.2.0}
+    command: --port 8082 --host 0.0.0.0 --workers 1
+    
+    volumes:
+      - ${PROMPT_CONFIG_FILE}:${PROMPT_CONFIG_FILE}
+    
+    environment:
+      EXAMPLE_PATH: 'src/nvidia_rag/ingestor_server'
+      PROMPT_CONFIG_FILE: ${PROMPT_CONFIG_FILE:-/prompt.yaml}
+      
+      # Vector DB configurations
+      APP_VECTORSTORE_URL: "http://milvus:19530"
+      APP_VECTORSTORE_NAME: "milvus"
+      APP_VECTORSTORE_SEARCHTYPE: ${APP_VECTORSTORE_SEARCHTYPE:-"dense"}
+      APP_VECTORSTORE_ENABLEGPUINDEX: ${APP_VECTORSTORE_ENABLEGPUINDEX:-False}
+      APP_VECTORSTORE_ENABLEGPUSEARCH: ${APP_VECTORSTORE_ENABLEGPUSEARCH:-False}
+      COLLECTION_NAME: ${COLLECTION_NAME:-multimodal_data}
+      
+      # Minio configurations
+      MINIO_ENDPOINT: "minio:9010"
+      MINIO_ACCESSKEY: "minioadmin"
+      MINIO_SECRETKEY: "minioadmin"
+      
+      NGC_API_KEY: ${NGC_API_KEY:?"NGC_API_KEY is required"}
+      NVIDIA_API_KEY: ${NGC_API_KEY:?"NGC_API_KEY is required"}
+      
+      # Use cloud models for everything
+      APP_EMBEDDINGS_SERVERURL: ${APP_EMBEDDINGS_SERVERURL}
+      APP_EMBEDDINGS_MODELNAME: ${APP_EMBEDDINGS_MODELNAME}
+      APP_EMBEDDINGS_DIMENSIONS: 2048
+      EMBEDDING_NIM_ENDPOINT: ${EMBEDDING_NIM_ENDPOINT}
+      
+      # Document processing settings from environment
+      APP_NVINGEST_EXTRACTTEXT: ${APP_NVINGEST_EXTRACTTEXT}
+      APP_NVINGEST_EXTRACTTABLES: ${APP_NVINGEST_EXTRACTTABLES}
+      APP_NVINGEST_EXTRACTCHARTS: ${APP_NVINGEST_EXTRACTCHARTS}
+      APP_NVINGEST_EXTRACTIMAGES: ${APP_NVINGEST_EXTRACTIMAGES}
+      APP_NVINGEST_EXTRACTINFOGRAPHICS: ${APP_NVINGEST_EXTRACTINFOGRAPHICS}
+      APP_NVINGEST_PDFEXTRACTMETHOD: ${APP_NVINGEST_PDFEXTRACTMETHOD}
+      
+      # Cloud processing endpoints
+      PADDLE_HTTP_ENDPOINT: ${PADDLE_HTTP_ENDPOINT}
+      PADDLE_INFER_PROTOCOL: ${PADDLE_INFER_PROTOCOL}
+      YOLOX_HTTP_ENDPOINT: ${YOLOX_HTTP_ENDPOINT}
+      YOLOX_INFER_PROTOCOL: ${YOLOX_INFER_PROTOCOL}
+      YOLOX_GRAPHIC_ELEMENTS_HTTP_ENDPOINT: ${YOLOX_GRAPHIC_ELEMENTS_HTTP_ENDPOINT}
+      YOLOX_GRAPHIC_ELEMENTS_INFER_PROTOCOL: ${YOLOX_GRAPHIC_ELEMENTS_INFER_PROTOCOL}
+      YOLOX_TABLE_STRUCTURE_HTTP_ENDPOINT: ${YOLOX_TABLE_STRUCTURE_HTTP_ENDPOINT}
+      YOLOX_TABLE_STRUCTURE_INFER_PROTOCOL: ${YOLOX_TABLE_STRUCTURE_INFER_PROTOCOL}
+      
+      # Caption model settings
+      APP_NVINGEST_CAPTIONMODELNAME: ${APP_NVINGEST_CAPTIONMODELNAME}
+      APP_NVINGEST_CAPTIONENDPOINTURL: ${APP_NVINGEST_CAPTIONENDPOINTURL}
+      
+      # Chunking settings
+      APP_NVINGEST_CHUNKSIZE: 512
+      APP_NVINGEST_CHUNKOVERLAP: 150
+      APP_NVINGEST_ENABLEPDFSPLITTER: True
+      APP_NVINGEST_TEXTDEPTH: page
+      
+      ENABLE_CITATIONS: True
+    
+    ports:
+      - "8082:8082"
+    
+    networks:
+      - nvidia-rag
+    
+    depends_on:
+      - redis-light
+
+  # Lightweight Redis (minimal memory usage)
+  redis-light:
+    container_name: redis-light
+    image: redis:7.0.15-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - nvidia-rag
+    mem_limit: 256m  # Limit to 256MB RAM
+
+networks:
+  nvidia-rag:
+    name: nvidia-rag
+    external: true
