@@ -310,7 +310,7 @@ async def generate_answer(
                     first_chunk = False
                 logger.debug(response_choice)
                 # Send generator with tokens in ChainResponse format
-                yield "data: " + str(chain_response.json()) + "\n\n"
+                yield "data: " + str(chain_response.model_dump_json()) + "\n\n"
 
             chain_response = ChainResponse()
 
@@ -324,10 +324,10 @@ async def generate_answer(
             chain_response.object = "chat.completion.chunk"
             chain_response.created = int(time.time())
             logger.debug(response_choice)
-            yield "data: " + str(chain_response.json()) + "\n\n"
+            yield "data: " + str(chain_response.model_dump_json()) + "\n\n"
         else:
             chain_response = ChainResponse()
-            yield "data: " + str(chain_response.json()) + "\n\n"
+            yield "data: " + str(chain_response.model_dump_json()) + "\n\n"
 
     except (MilvusException, MilvusUnavailableException) as e:
         exception_msg = ("Error from milvus server. Please ensure you have ingested some documents. "
